@@ -31,3 +31,7 @@
     transform: rotate(360deg);
   }
 }
+
+.actions > *:not(:first-child) {
+  margin-left: 10px;
+}

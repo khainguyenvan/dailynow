@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Row, Col, DatePicker, Select, Card } from 'antd';
 import moment from 'moment';
 import styled from 'styled-components';
+import './App.css';
 
 const { Meta } = Card;
 const Option = Select.Option;
@@ -62,21 +63,21 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <Row>
-          <Col>
+        <Row type="flex" justify="center" style={{ marginTop: 20 }}>
+          <Col className="actions">
             <DatePicker defaultValue={moment()} onChange={this.onChangeDate} ></DatePicker>
             <Select defaultValue="0" style={{ width: 120 }} onChange={this.handleChangePage}>
               {option.map(item => <Option key={`op${item}`} value={item}>{item}</Option>)}
             </Select>
           </Col>
         </Row>
-        <Row gutter={16}>
+        <Row gutter={16} type="flex">
           {this.state.data && this.state.data.length > 0 && this.state.data.map(item =>
-            <Col xs={24} sm={12} md={8} lg={6} span={8} key={item.id}>
+            <Card bordered={false} hoverable>
               <TagStyled>
                 <Tag image={item.image} url={item.url} title={item.title}></Tag>
               </TagStyled>
-            </Col>
+            </Card>
           )}
         </Row>
       </div>
