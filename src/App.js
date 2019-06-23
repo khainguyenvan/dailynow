@@ -4,6 +4,8 @@ import { Row, Col, DatePicker, Select, Card, Layout, Input } from 'antd';
 import moment from 'moment';
 import styled from 'styled-components';
 import './App.css';
+import momentIterator from 'moment-iterator';
+import withLoadingScreen from './LoadingScreen';
 
 const { RangePicker } = DatePicker;
 const { Meta } = Card;
@@ -12,6 +14,7 @@ const Search = Input.Search;
 
 const MainStyled = styled.div`
   margin: 0 auto;
+  padding-top: 20px;
   width: 80%;
   .ant-card-actions > li > span {
     display: block;
@@ -25,7 +28,7 @@ const MainStyled = styled.div`
   .ant-card-body {
     background: #fff;
   }
-  .ant-card-cover img{
+  .ant-card-cover img {
     height: 100%;
     width: 100%;
     max-height: 300px;
@@ -46,8 +49,9 @@ const ImageStyled = styled.div`
   width: 300px;
   height: 300px;
   max-height: 300px;
-  background: url(${props => props.src ? props.src : ""}) center center no-repeat;
-`
+  background: url(${props => (props.src ? props.src : '')}) center center
+    no-repeat;
+`;
 
 const pubs =
   'airbnb,alligator,angular,angular_depth,aws,soundcloud,bit,chromium,codeburst,codecentric,codrops,css_tricks,daily_js,daily,dc,devto,dev_channel,echojs,facebook_code,flutter_com,freecodecamp,gc,github,gcp,hackernoon,infoq,instagram,istio,itnext,jsk,kdnuggets,kotlin,k8s,lambda,ln,lightbend,linkedin,logrocket,medium_js,hacks,msdn,netflix,nodejs,nodesource,npm,pragmatists,quick_code,react,react_native,rpython,risingstack,scotch,sitepen,sitepoint,smashing,softwaremill,spotify,spring,tem,disney,newstack,swlh,vue,tds,tutorialzine,tuts_plus,twitter,web_fundamentals,webkit';
@@ -92,19 +96,17 @@ class App extends Component {
     pubs: [],
     source: []
   };
-  async componentDidMount() {
+
+  componentDidMount() {
     try {
-      await this.callApi(
-        this.state.page,
-        this.state.pageSize,
-        this.state.latest
-      );
+      this.callApi(this.state.page, this.state.pageSize, this.state.latest);
     } catch (e) {
       console.log(e);
     }
   }
 
   async callApi(page, pageSize, latest) {
+    this.props.handleLoading(true);
     const { data } = await axios.get('/v1/posts/latest', {
       params: { page, pageSize, pubs, latest }
     });
@@ -113,8 +115,10 @@ class App extends Component {
       data,
       source: data
     });
+    this.props.handleLoading(false);
     return data;
   }
+
   onChangeDate = async date => {
     await this.callApi(
       this.state.page,
@@ -123,14 +127,17 @@ class App extends Component {
     );
     this.setState({ latest: date.toISOString() });
   };
+
   handleChangePage = async value => {
     this.setState({ page: value });
     await this.callApi(value, this.state.pageSize, this.state.latest);
   };
+
   handleChangeSize = async value => {
     this.setState({ pageSize: value });
     await this.callApi(this.state.page, value, this.state.latest);
   };
+
   handleSearch = value => {
     if (value.trim() === '') {
       this.setState({ data: this.state.source });
@@ -144,47 +151,53 @@ class App extends Component {
 
   onChangeRange = async value => {
     let listDay = [];
-    if(value[0].isBefore() && value[1].isBefore()){
-      for(let m = value[0]; m.diff(value[1], 'days') <= 0;m.add(1, 'days')){
-        ((i) => listDay.push(i))(m)
-      }
+    if (value[0].isBefore() && value[1].isBefore()) {
+      // for(let m = value[0]; m.diff(value[1], 'days') <= 0;m.add(1, 'days')){
+      //   ((i) => listDay.push(i))(m)
+      // }
+      momentIterator(value[0], value[1]).each('days', e => listDay.push(e));
     }
-    console.log(listDay)
-    let URLPromises = listDay.map((day) => {
-      return this.prepareData(0, 100, day.toISOString())
-    })
+    console.log(listDay);
+    let URLPromises = listDay.map(day => {
+      return this.prepareData(0, 100, day.toISOString());
+    });
     let responses = await Promise.all(URLPromises);
-    let data = responses.flatMap(item => item.data)
-    this.setState({data: this.getUnique(data, "id")})
-
-  }
+    let data = responses.flatMap(item => item.data);
+    this.setState({ data: this.getUnique(data, 'id') });
+  };
 
   getUnique(arr, comp) {
-
     const unique = arr
-         .map(e => e[comp])
+      .map(e => e[comp])
 
       .map((e, i, final) => final.indexOf(e) === i && i)
 
-      .filter(e => arr[e]).map(e => arr[e]);
+      .filter(e => arr[e])
+      .map(e => arr[e]);
 
-     return unique;
+    return unique;
   }
-
 
   prepareData = (page, pageSize, latest) => {
     return axios.get('/v1/posts/latest', {
       params: { page, pageSize, pubs, latest }
-    })
-  }
+    });
+  };
   render() {
     return (
       <Layout>
         <MainStyled>
           <Row type="flex" gutter={16} justify="center">
+            <Col>Pick Data</Col>
             <Col>
-              <span>Pick Data</span>
-              <RangePicker onChange={this.onChangeRange}></RangePicker>
+              <RangePicker onChange={this.onChangeRange} />
+            </Col>
+            <Col lg={8} xs={24}>
+              <Search
+                placeholder="input search text"
+                onSearch={value => this.handleSearch(value)}
+                enterButton
+              />
             </Col>
           </Row>
           <Row
@@ -199,6 +212,8 @@ class App extends Component {
                 defaultValue={moment()}
                 onChange={this.onChangeDate}
               />
+            </Col>
+            <Col>
               <span>Page : </span>
               <Select
                 defaultValue={this.state.page}
@@ -211,6 +226,8 @@ class App extends Component {
                   </Option>
                 ))}
               </Select>
+            </Col>
+            <Col>
               <span>Page Size : </span>
               <Select
                 defaultValue={this.state.pageSize}
@@ -224,13 +241,7 @@ class App extends Component {
                 ))}
               </Select>
             </Col>
-            <Col lg={8} xs={24}>
-              <Search
-                placeholder="input search text"
-                onSearch={value => this.handleSearch(value)}
-                enterButton
-              />
-            </Col>
+
           </Row>
           <Row
             gutter={16}
@@ -257,4 +268,5 @@ class App extends Component {
   }
 }
 
-export default App;
+export default withLoadingScreen(App);
+// export default App;
